@@ -54,6 +54,27 @@ openclaw-mcp-server --transport http --port 8080
 
 See [Tools Reference](docs/tools.md) for full input/output schemas and examples.
 
+## CLI Chat Client
+
+An interactive chat-first CLI is included for testing and demos:
+
+```bash
+openclaw-mcp-cli
+
+> Hello, what can you do?
+I can help you with browsing, scheduling, memory search...
+
+> /status
+{ "status": "ok", "instance": "default" }
+
+> /invoke browser --action snapshot --args '{"url":"https://example.com"}'
+{ "ok": true, ... }
+
+> /help
+```
+
+Type messages to chat, use `/commands` for tools. See `/help` for all commands.
+
 ## Documentation
 
 | Doc | Description |

@@ -237,18 +237,24 @@ main() {
     $GO_CMD build -o "${WORK_DIR}/${BINARY_NAME}" ./cmd/server/
     ok "Built ${BINARY_NAME}"
 
+    info "Building ${BINARY_NAME}-cli..."
+    $GO_CMD build -o "${WORK_DIR}/${BINARY_NAME}-cli" ./cmd/cli/
+    ok "Built ${BINARY_NAME}-cli"
+
     # Install
     info "Installing to ${INSTALL_DIR}..."
     mkdir -p "$INSTALL_DIR"
-    if [ -w "$INSTALL_DIR" ]; then
-        cp "${WORK_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
-        chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
-    else
-        warn "No write access to ${INSTALL_DIR}. Trying with sudo..."
-        sudo cp "${WORK_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
-        sudo chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
-    fi
-    ok "Installed to ${INSTALL_DIR}/${BINARY_NAME}"
+    for bin in "${BINARY_NAME}" "${BINARY_NAME}-cli"; do
+        if [ -w "$INSTALL_DIR" ]; then
+            cp "${WORK_DIR}/${bin}" "${INSTALL_DIR}/${bin}"
+            chmod +x "${INSTALL_DIR}/${bin}"
+        else
+            warn "No write access to ${INSTALL_DIR}. Trying with sudo..."
+            sudo cp "${WORK_DIR}/${bin}" "${INSTALL_DIR}/${bin}"
+            sudo chmod +x "${INSTALL_DIR}/${bin}"
+        fi
+    done
+    ok "Installed to ${INSTALL_DIR}"
 
     # Verify
     if command -v "$BINARY_NAME" &>/dev/null; then
