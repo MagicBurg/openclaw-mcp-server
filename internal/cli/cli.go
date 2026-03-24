@@ -82,6 +82,8 @@ func (c *CLI) handleCommand(ctx context.Context, line string) error {
 		c.cmdSetInstance(args)
 	case "/session":
 		c.cmdSetSession(args)
+	case "/discover":
+		return c.cmdDiscover(ctx, args)
 	case "/invoke":
 		return c.cmdInvoke(ctx, args)
 	case "/cron":
@@ -125,6 +127,46 @@ func (c *CLI) cmdTools(ctx context.Context) error {
 		c.printf("  %-25s %s\n", tool.Name, tool.Description)
 	}
 	c.printf("\n")
+	return nil
+}
+
+func (c *CLI) cmdDiscover(ctx context.Context, args []string) error {
+	toolArgs := map[string]any{}
+	inst := flagValue(args, "--instance", "-i")
+	if inst != "" {
+		toolArgs["instance"] = inst
+	} else if c.instance != "" {
+		toolArgs["instance"] = c.instance
+	}
+
+	c.printf("Probing gateway for available tools...\n")
+	result, err := c.session.CallTool(ctx, &mcp.CallToolParams{
+		Name:      "openclaw_discover",
+		Arguments: toolArgs,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Pretty-print discovery results.
+	text := extractText(result)
+	var data struct {
+		Instance  string `json:"instance"`
+		Available []struct {
+			Name   string `json:"name"`
+			Status string `json:"status"`
+		} `json:"available"`
+		Total int `json:"total"`
+	}
+	if err := json.Unmarshal([]byte(text), &data); err == nil {
+		c.printf("\nAvailable tools on %s (%d):\n", data.Instance, data.Total)
+		for _, t := range data.Available {
+			c.printf("  %s\n", t.Name)
+		}
+		c.printf("\nUse: /invoke <tool> [--action ACTION] [--args JSON]\n\n")
+	} else {
+		c.printf("%s\n", text)
+	}
 	return nil
 }
 
@@ -298,6 +340,7 @@ func (c *CLI) printHelp() {
 Commands:
   /help, /h                Show this help
   /tools                   List available MCP tools
+  /discover [--instance X] Discover available OpenClaw tools on a worker
   /status [--instance X]   Health check
   /instances               List worker instances
   /instance [name]         Set active worker (empty = reset to default)

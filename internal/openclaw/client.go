@@ -84,6 +84,39 @@ func (c *Client) ToolInvoke(ctx context.Context, toolReq ToolInvokeRequest) (*To
 	return &resp, nil
 }
 
+// DiscoverTools probes the gateway to find which tools are available.
+// It tries invoking each known tool with a dry-run/minimal request.
+func (c *Client) DiscoverTools(ctx context.Context) []ToolAvailability {
+	knownTools := []string{
+		"browser", "canvas", "nodes", "cron", "message", "tts",
+		"image_generate", "image", "pdf", "web_search", "web_fetch",
+		"gateway", "agents_list", "sessions_list", "sessions_spawn",
+		"sessions_send", "sessions_history", "memory_search", "memory_get",
+		"subagents",
+	}
+
+	results := make([]ToolAvailability, 0, len(knownTools))
+	for _, tool := range knownTools {
+		req := ToolInvokeRequest{
+			Tool:   tool,
+			Args:   map[string]any{},
+			DryRun: true,
+		}
+		resp, err := c.ToolInvoke(ctx, req)
+		status := "available"
+		if err != nil {
+			status = "error"
+		} else if !resp.OK && resp.Error != nil && resp.Error.Type == "not_found" {
+			status = "not_found"
+		} else if !resp.OK {
+			// Tool exists but returned an error (likely missing args) — still available
+			status = "available"
+		}
+		results = append(results, ToolAvailability{Name: tool, Status: status})
+	}
+	return results
+}
+
 // Health checks the gateway's health endpoint.
 func (c *Client) Health(ctx context.Context) (string, error) {
 	body, err := c.doRequest(ctx, http.MethodGet, "/health", nil, "")

@@ -31,6 +31,11 @@ func RegisterAll(server *mcp.Server, registry *openclaw.Registry) {
 		Name:        "openclaw_instances",
 		Description: "List all configured OpenClaw worker instances with their names, URLs, and default status. Never exposes authentication tokens.",
 	}, InstancesHandler(registry))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "openclaw_discover",
+		Description: "Discover which OpenClaw tools are available on a worker instance by probing the gateway.",
+	}, DiscoverHandler(registry))
 }
 
 // errorResult creates an MCP error result with the given message.

@@ -5,6 +5,7 @@ go 1.24.0
 require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/modelcontextprotocol/go-sdk v1.3.1
+	nhooyr.io/websocket v1.8.17
 )
 
 require (

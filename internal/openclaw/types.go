@@ -72,3 +72,59 @@ type HealthResponse struct {
 	OK     bool   `json:"ok,omitempty"`
 	Status string `json:"status,omitempty"`
 }
+
+// ToolAvailability reports whether a tool is available on a gateway.
+type ToolAvailability struct {
+	Name   string `json:"name"`
+	Status string `json:"status"` // "available", "not_found", "error"
+}
+
+// ToolsCatalogResult is the response from tools.catalog WebSocket RPC.
+type ToolsCatalogResult struct {
+	AgentID  string           `json:"agentId"`
+	Profiles []ToolProfile    `json:"profiles"`
+	Groups   []ToolGroup      `json:"groups"`
+}
+
+// ToolProfile is a tool profile (e.g., minimal, coding, full).
+type ToolProfile struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
+// ToolGroup is a group of related tools.
+type ToolGroup struct {
+	ID       string     `json:"id"`
+	Label    string     `json:"label"`
+	Source   string     `json:"source"` // "core" or "plugin"
+	PluginID string     `json:"pluginId,omitempty"`
+	Tools    []ToolEntry `json:"tools"`
+}
+
+// ToolEntry is a single tool in a group.
+type ToolEntry struct {
+	ID              string   `json:"id"`
+	Label           string   `json:"label"`
+	Description     string   `json:"description"`
+	Source          string   `json:"source"`
+	PluginID        string   `json:"pluginId,omitempty"`
+	DefaultProfiles []string `json:"defaultProfiles"`
+}
+
+// SkillsStatusResult is the response from skills.status WebSocket RPC.
+type SkillsStatusResult struct {
+	WorkspaceDir    string        `json:"workspaceDir"`
+	ManagedSkillsDir string       `json:"managedSkillsDir"`
+	Skills          []SkillStatus `json:"skills"`
+}
+
+// SkillStatus is the status of a single skill.
+type SkillStatus struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Source      string `json:"source"`
+	Emoji       string `json:"emoji,omitempty"`
+	Disabled    bool   `json:"disabled"`
+	Eligible    bool   `json:"eligible"`
+	PrimaryEnv  string `json:"primaryEnv,omitempty"`
+}
