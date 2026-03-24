@@ -261,4 +261,32 @@ List all configured worker instances.
 
 ## Post-Execution Report
 
-_(to be filled after implementation)_
+**Completed:** 2026-03-23
+
+### Implementation Notes
+
+- **Go MCP SDK v1.3.1** used (not v1.4.1 which requires Go 1.25.0 stable). The `go.mod` targets Go 1.24.0 due to transitive dependency `golang.org/x/oauth2`. Go toolchain auto-download handles this via `GOTOOLCHAIN=auto`.
+- **jsonschema tags:** The SDK's `jsonschema` struct tag is description-only (no `required` or `description=` prefixes). Required fields are inferred from `json` tags without `omitempty`.
+- **Content type:** SDK v1.3.1 uses `[]mcp.Content` (interface) not `[]*mcp.Content`, and has no `NewTextContent` helper. Used `&mcp.TextContent{Text: ...}` directly.
+- **Streamable HTTP** transport used for HTTP mode (not legacy SSE).
+
+### Test Results
+
+- 42 tests across 4 packages, all passing
+- `internal/config`: 14 tests (env loading, validation, edge cases)
+- `internal/openclaw`: 12 tests (client HTTP calls, registry resolution)
+- `internal/tools`: 15 tests (all 5 tool handlers, registration)
+- `internal/server`: 1 test (server creation)
+
+### Deviations from Plan
+
+- No `Makefile` added — `go build` and `go test` are sufficient for now.
+- No `docs/architecture.md` created — README covers the architecture overview, and `docs/research.md` has the detailed reference.
+
+### Known Limitations
+
+- No streaming support for chat (non-streaming only in v1)
+- No WebSocket client for gateway — all communication is HTTP
+- Bearer token auth is simple static comparison (no OAuth 2.1 yet)
+- No async task management (unlike the TypeScript `openclaw-mcp`)
+- Tool invoke response parsing is generic (`any`) — structured result types could be added per-tool later
