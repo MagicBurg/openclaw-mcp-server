@@ -17,10 +17,16 @@ See the [Architecture](docs/architecture.md) doc for details, or jump to [Instal
 ## Install
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/MagicBurg/openclaw-mcp-server/main/install.sh | sh
+```
+
+Or clone and install manually:
+
+```bash
 git clone https://github.com/MagicBurg/openclaw-mcp-server.git && cd openclaw-mcp-server && ./install.sh
 ```
 
-This installs the `openclaw-mcp-server` binary to `~/.local/bin`. See [Installation](docs/installation.md) for options.
+Installs to `~/.local/bin` by default. See [Installation](docs/installation.md) for options.
 
 ## Quick Start
 

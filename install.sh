@@ -2,9 +2,12 @@
 set -euo pipefail
 
 # OpenClaw MCP Server installer
-# Usage: ./install.sh [--prefix ~/.local] [--go-version 1.24.0]
+# Usage:
+#   curl -fsSL https://raw.githubusercontent.com/MagicBurg/openclaw-mcp-server/main/install.sh | sh
+#   ./install.sh [--prefix ~/.local] [--go-version 1.24.0]
 
 BINARY_NAME="openclaw-mcp-server"
+REPO_URL="https://github.com/MagicBurg/openclaw-mcp-server.git"
 DEFAULT_PREFIX="$HOME/.local"
 MIN_GO_MAJOR=1
 MIN_GO_MINOR=24
@@ -116,24 +119,14 @@ install_go() {
 
     # Check if we can write to /usr/local
     if [ -w "/usr/local" ] || [ "$(id -u)" -eq 0 ]; then
-        local tmp
-        tmp="$(mktemp -d)"
-        trap "rm -rf '$tmp'" EXIT
-
         info "Downloading ${go_url}..."
-        if command -v curl &>/dev/null; then
-            curl -fsSL "$go_url" -o "${tmp}/${go_tarball}"
-        elif command -v wget &>/dev/null; then
-            wget -q "$go_url" -O "${tmp}/${go_tarball}"
-        else
-            die "Neither curl nor wget found. Install one of them or install Go manually."
-        fi
+        download "$go_url" "${WORK_DIR}/${go_tarball}"
 
         # Remove old Go installation if present
         [ -d "$go_dir" ] && rm -rf "$go_dir"
 
         info "Extracting to ${go_dir}..."
-        tar -C /usr/local -xzf "${tmp}/${go_tarball}"
+        tar -C /usr/local -xzf "${WORK_DIR}/${go_tarball}"
 
         GO_CMD="${go_dir}/bin/go"
         ok "Go ${GO_VERSION} installed to ${go_dir}"
@@ -157,12 +150,49 @@ install_go() {
     fi
 }
 
+# --- Download helper ---
+download() {
+    local url="$1" dest="$2"
+    if command -v curl &>/dev/null; then
+        curl -fsSL "$url" -o "$dest"
+    elif command -v wget &>/dev/null; then
+        wget -q "$url" -O "$dest"
+    else
+        die "Neither curl nor wget found. Install one of them first."
+    fi
+}
+
+# --- Ensure source is available ---
+ensure_source() {
+    # Already in project directory (ran as ./install.sh)
+    if [ -f "go.mod" ] && grep -q "openclaw-mcp-server" go.mod 2>/dev/null; then
+        SOURCE_DIR="$(pwd)"
+        CLONED=false
+        return
+    fi
+
+    # Piped via curl | sh — need to clone
+    info "Cloning ${REPO_URL}..."
+    if ! command -v git &>/dev/null; then
+        die "git is required. Install git first."
+    fi
+
+    SOURCE_DIR="${WORK_DIR}/openclaw-mcp-server"
+    git clone --depth 1 "$REPO_URL" "$SOURCE_DIR" 2>/dev/null
+    CLONED=true
+    ok "Cloned to ${SOURCE_DIR}"
+}
+
 # --- Main ---
 main() {
     echo ""
     echo "  OpenClaw MCP Server Installer"
     echo "  =============================="
     echo ""
+
+    # Create temp working directory
+    WORK_DIR="$(mktemp -d)"
+    trap 'rm -rf "$WORK_DIR"' EXIT
 
     # Detect platform
     info "Detecting platform..."
@@ -181,10 +211,9 @@ main() {
     # Ensure GOTOOLCHAIN=auto for version management
     export GOTOOLCHAIN=auto
 
-    # Verify we're in the project directory
-    if [ ! -f "go.mod" ] || ! grep -q "openclaw-mcp-server" go.mod 2>/dev/null; then
-        die "Run this script from the openclaw-mcp-server project root"
-    fi
+    # Get source code
+    ensure_source
+    cd "$SOURCE_DIR"
 
     # Download dependencies
     info "Downloading dependencies..."
@@ -205,39 +234,30 @@ main() {
 
     # Build
     info "Building ${BINARY_NAME}..."
-    $GO_CMD build -o "${BINARY_NAME}" ./cmd/server/
-    ok "Built ./${BINARY_NAME}"
+    $GO_CMD build -o "${WORK_DIR}/${BINARY_NAME}" ./cmd/server/
+    ok "Built ${BINARY_NAME}"
 
     # Install
     info "Installing to ${INSTALL_DIR}..."
-    if [ -w "$INSTALL_DIR" ] || [ "$(id -u)" -eq 0 ]; then
-        mkdir -p "$INSTALL_DIR"
-        cp "${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+    mkdir -p "$INSTALL_DIR"
+    if [ -w "$INSTALL_DIR" ]; then
+        cp "${WORK_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
         chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
-        ok "Installed to ${INSTALL_DIR}/${BINARY_NAME}"
     else
         warn "No write access to ${INSTALL_DIR}. Trying with sudo..."
-        sudo mkdir -p "$INSTALL_DIR"
-        sudo cp "${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
+        sudo cp "${WORK_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
         sudo chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
-        ok "Installed to ${INSTALL_DIR}/${BINARY_NAME}"
     fi
+    ok "Installed to ${INSTALL_DIR}/${BINARY_NAME}"
 
     # Verify
     if command -v "$BINARY_NAME" &>/dev/null; then
         ok "Verified: $(command -v "$BINARY_NAME")"
-    elif [ -x "${INSTALL_DIR}/${BINARY_NAME}" ]; then
-        ok "Installed at ${INSTALL_DIR}/${BINARY_NAME}"
+    else
         if ! echo "$PATH" | tr ':' '\n' | grep -qx "$INSTALL_DIR"; then
             warn "${INSTALL_DIR} is not in your PATH. Add it with:"
             echo "    export PATH=\"${INSTALL_DIR}:\$PATH\""
         fi
-    fi
-
-    # Copy .env.example if no .env exists
-    if [ -f ".env.example" ] && [ ! -f ".env" ]; then
-        cp .env.example .env
-        ok "Created .env from .env.example — edit it with your configuration"
     fi
 
     # Done
@@ -254,7 +274,7 @@ main() {
     echo "     ${BINARY_NAME}                          # stdio mode"
     echo "     ${BINARY_NAME} --transport http         # HTTP mode"
     echo ""
-    echo "  See docs/configuration.md for full options."
+    echo "  See https://github.com/MagicBurg/openclaw-mcp-server for full docs."
     echo ""
 }
 

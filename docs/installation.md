@@ -8,7 +8,13 @@
 ## Quick Install
 
 ```bash
-git clone https://github.com/weiboz/openclaw-mcp-server.git
+curl -fsSL https://raw.githubusercontent.com/MagicBurg/openclaw-mcp-server/main/install.sh | sh
+```
+
+Or clone and run locally:
+
+```bash
+git clone https://github.com/MagicBurg/openclaw-mcp-server.git
 cd openclaw-mcp-server
 ./install.sh
 ```
@@ -31,7 +37,7 @@ Options:
 ## Manual Build
 
 ```bash
-git clone https://github.com/weiboz/openclaw-mcp-server.git
+git clone https://github.com/MagicBurg/openclaw-mcp-server.git
 cd openclaw-mcp-server
 go build -o openclaw-mcp-server ./cmd/server/
 ```
