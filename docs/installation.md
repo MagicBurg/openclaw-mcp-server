@@ -18,12 +18,12 @@ The install script will:
 2. Download dependencies
 3. Run tests
 4. Build the binary
-5. Install to `/usr/local/bin`
+5. Install to `~/.local/bin`
 6. Create `.env` from `.env.example`
 
 Options:
 ```bash
-./install.sh --prefix ~/.local     # Install to ~/.local/bin instead
+./install.sh --prefix /usr/local   # Install to /usr/local/bin instead
 ./install.sh --skip-tests          # Skip test step
 ./install.sh --help                # Show all options
 ```

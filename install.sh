@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # OpenClaw MCP Server installer
-# Usage: ./install.sh [--prefix /usr/local] [--go-version 1.24.0]
+# Usage: ./install.sh [--prefix ~/.local] [--go-version 1.24.0]
 
 BINARY_NAME="openclaw-mcp-server"
-DEFAULT_PREFIX="/usr/local"
+DEFAULT_PREFIX="$HOME/.local"
 MIN_GO_MAJOR=1
 MIN_GO_MINOR=24
 DEFAULT_GO_VERSION="1.24.0"
