@@ -39,7 +39,7 @@ openclaw-mcp-server
 # Run (HTTP, multi-instance)
 OPENCLAW_INSTANCES='[{"name":"w1","url":"http://10.0.0.1:18789","token":"sk-1","default":true}]' \
 MCP_AUTH_TOKEN=my-secret \
-openclaw-mcp-server --transport http --port 8080
+openclaw-mcp-server --transport http --port 21789
 ```
 
 ## MCP Tools

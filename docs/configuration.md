@@ -19,7 +19,7 @@ Or specify explicitly: `--config /path/to/config.toml`
 [server]
 transport = "http"
 host = "127.0.0.1"
-port = 8080
+port = 21789
 auth_token = "my-mcp-token"
 
 [[instances]]
@@ -53,7 +53,7 @@ See `config.example.toml` in the project root for a fully commented template.
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `MCP_TRANSPORT` | Transport mode: `stdio` or `http` | `stdio` |
-| `MCP_PORT` | HTTP server port | `8080` |
+| `MCP_PORT` | HTTP server port | `21789` |
 | `MCP_HOST` | HTTP server bind address | `0.0.0.0` |
 | `MCP_AUTH_TOKEN` | Bearer token required from MCP clients in HTTP mode | _(none)_ |
 
@@ -179,7 +179,7 @@ OPENCLAW_INSTANCES='[
   {"name":"prod-2","url":"http://10.0.0.2:18789","token":"sk-2"}
 ]' \
 MCP_AUTH_TOKEN=secure-random-token \
-./openclaw-mcp-server --transport http --port 8080
+./openclaw-mcp-server --transport http --port 21789
 ```
 
 ### Claude Desktop

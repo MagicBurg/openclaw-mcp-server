@@ -45,8 +45,8 @@ func TestLoadFromEnv_Defaults(t *testing.T) {
 	if cfg.Host != "0.0.0.0" {
 		t.Errorf("host = %q, want %q", cfg.Host, "0.0.0.0")
 	}
-	if cfg.Port != 8080 {
-		t.Errorf("port = %d, want %d", cfg.Port, 8080)
+	if cfg.Port != 21789 {
+		t.Errorf("port = %d, want %d", cfg.Port, 21789)
 	}
 	if len(cfg.Instances) != 1 {
 		t.Fatalf("instances count = %d, want 1", len(cfg.Instances))

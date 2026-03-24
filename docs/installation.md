@@ -119,7 +119,7 @@ Create a `config.toml` for this setup:
 ```toml
 [server]
 transport = "http"
-port = 8080
+port = 21789
 auth_token = "my-mcp-secret"
 
 [[instances]]
@@ -195,7 +195,7 @@ Add to your calling OpenClaw's `openclaw.json`:
 Start the MCP server in HTTP mode:
 
 ```bash
-openclaw-mcp-server --config config.toml --transport http --port 8080 --auth-token my-mcp-secret
+openclaw-mcp-server --config config.toml --transport http --port 21789 --auth-token my-mcp-secret
 ```
 
 Then configure the calling OpenClaw to connect via HTTP MCP:
@@ -204,7 +204,7 @@ Then configure the calling OpenClaw to connect via HTTP MCP:
 {
   "mcpServers": {
     "openclaw-workers": {
-      "url": "http://mcp-server-host:8080/mcp",
+      "url": "http://mcp-server-host:21789/mcp",
       "headers": {
         "Authorization": "Bearer my-mcp-secret"
       }

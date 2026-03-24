@@ -65,7 +65,7 @@ func Load(configPath string) (*ServerConfig, error) {
 	cfg := &ServerConfig{
 		Transport: "stdio",
 		Host:      "0.0.0.0",
-		Port:      8080,
+		Port:      21789,
 	}
 
 	// Step 1: Load from config file.
@@ -104,13 +104,21 @@ func Load(configPath string) (*ServerConfig, error) {
 	return cfg, nil
 }
 
-// LoadFromEnv builds a ServerConfig from environment variables only (no config file).
+// LoadFromEnv builds a ServerConfig from environment variables only, skipping config file search.
 // Kept for backward compatibility.
 func LoadFromEnv() (*ServerConfig, error) {
-	return Load("")
+	return Load(skipConfigFile)
 }
 
+// skipConfigFile is a sentinel value that disables config file loading.
+const skipConfigFile = "\x00skip"
+
 func loadFile(cfg *ServerConfig, path string) error {
+	// Skip config file loading if sentinel value.
+	if path == skipConfigFile {
+		return nil
+	}
+
 	// Find config file.
 	if path == "" {
 		for _, p := range configSearchPaths() {

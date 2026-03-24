@@ -6,7 +6,7 @@
 [server]
 transport = "stdio"       # "stdio" or "http"
 # host = "0.0.0.0"        # HTTP bind address
-# port = 8080             # HTTP port
+# port = 21789             # HTTP port
 # auth_token = ""         # Bearer token for MCP client auth (HTTP mode)
 
 # Define one or more OpenClaw gateway instances (workers).
