@@ -1,7 +1,10 @@
 package openclaw
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"sync"
 
 	"github.com/weiboz/openclaw-mcp-server/internal/config"
 )
@@ -82,4 +85,58 @@ func (r *Registry) DefaultName() string {
 // Size returns the number of registered instances.
 func (r *Registry) Size() int {
 	return len(r.clients)
+}
+
+// ProbeResult holds the startup probe results for one instance.
+type ProbeResult struct {
+	Name           string
+	URL            string
+	Health         string // "ok" or "error"
+	HealthError    string
+	AvailableTools []string
+}
+
+// ProbeAll health-checks and discovers tools on all instances concurrently.
+// Results are logged and returned. Errors are non-fatal.
+func (r *Registry) ProbeAll(ctx context.Context) []ProbeResult {
+	results := make([]ProbeResult, len(r.configs))
+	var wg sync.WaitGroup
+
+	for i, cfg := range r.configs {
+		wg.Add(1)
+		go func(idx int, inst config.InstanceConfig) {
+			defer wg.Done()
+
+			client := r.clients[inst.Name]
+			pr := ProbeResult{
+				Name: inst.Name,
+				URL:  inst.URL,
+			}
+
+			// Health check.
+			status, err := client.Health(ctx)
+			pr.Health = status
+			if err != nil {
+				pr.HealthError = err.Error()
+				log.Printf("  [%s] %s — health: %s (%s)", inst.Name, inst.URL, status, err)
+				results[idx] = pr
+				return
+			}
+			log.Printf("  [%s] %s — health: %s", inst.Name, inst.URL, status)
+
+			// Discover tools.
+			tools := client.DiscoverTools(ctx)
+			for _, t := range tools {
+				if t.Status == "available" {
+					pr.AvailableTools = append(pr.AvailableTools, t.Name)
+				}
+			}
+			log.Printf("  [%s] available tools: %d", inst.Name, len(pr.AvailableTools))
+
+			results[idx] = pr
+		}(i, cfg)
+	}
+
+	wg.Wait()
+	return results
 }

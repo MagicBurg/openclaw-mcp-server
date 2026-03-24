@@ -26,6 +26,11 @@ func main() {
 	}
 
 	registry := openclaw.NewRegistry(cfg.Instances)
+
+	// Probe instances at startup.
+	log.Printf("probing %d instance(s)...", len(cfg.Instances))
+	registry.ProbeAll(context.Background())
+
 	srv := server.New(registry)
 
 	// Create in-memory transport pair.

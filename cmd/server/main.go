@@ -47,6 +47,10 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
+	// Probe all instances at startup.
+	log.Printf("probing %d instance(s)...", len(cfg.Instances))
+	registry.ProbeAll(ctx)
+
 	switch cfg.Transport {
 	case "stdio":
 		runStdio(ctx, registry)
