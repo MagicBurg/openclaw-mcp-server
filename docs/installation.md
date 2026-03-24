@@ -5,7 +5,30 @@
 - **Go 1.24+** — the project uses `go 1.24.0` in `go.mod`. If your system Go is older, Go's toolchain auto-download will fetch the right version (set `GOTOOLCHAIN=auto` if needed).
 - **One or more running OpenClaw gateway instances** — the MCP server connects to OpenClaw via HTTP. See the [OpenClaw documentation](https://github.com/nicepkg/openclaw) for setup instructions.
 
-## Build from Source
+## Quick Install
+
+```bash
+git clone https://github.com/weiboz/openclaw-mcp-server.git
+cd openclaw-mcp-server
+./install.sh
+```
+
+The install script will:
+1. Check for Go 1.24+ (and install it if missing)
+2. Download dependencies
+3. Run tests
+4. Build the binary
+5. Install to `/usr/local/bin`
+6. Create `.env` from `.env.example`
+
+Options:
+```bash
+./install.sh --prefix ~/.local     # Install to ~/.local/bin instead
+./install.sh --skip-tests          # Skip test step
+./install.sh --help                # Show all options
+```
+
+## Manual Build
 
 ```bash
 git clone https://github.com/weiboz/openclaw-mcp-server.git
@@ -15,7 +38,7 @@ go build -o openclaw-mcp-server ./cmd/server/
 
 This produces a single static binary `openclaw-mcp-server`.
 
-## Verify the Build
+## Verify
 
 ```bash
 ./openclaw-mcp-server --help
