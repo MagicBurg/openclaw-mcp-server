@@ -9,23 +9,26 @@ import (
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/weiboz/openclaw-mcp-server/internal/openclaw"
 )
 
 // CLI is an interactive chat-first REPL that talks to the MCP server.
 type CLI struct {
-	session  *mcp.ClientSession
-	instance string // active instance (empty = default)
+	session   *mcp.ClientSession
+	registry  *openclaw.Registry
+	instance  string // active instance (empty = default)
 	sessionID string // active chat session
-	in       io.Reader
-	out      io.Writer
+	in        io.Reader
+	out       io.Writer
 }
 
-// New creates a new CLI with the given MCP client session.
-func New(session *mcp.ClientSession, in io.Reader, out io.Writer) *CLI {
+// New creates a new CLI with the given MCP client session and registry.
+func New(session *mcp.ClientSession, registry *openclaw.Registry, in io.Reader, out io.Writer) *CLI {
 	return &CLI{
-		session: session,
-		in:      in,
-		out:     out,
+		session:  session,
+		registry: registry,
+		in:       in,
+		out:      out,
 	}
 }
 
@@ -84,6 +87,10 @@ func (c *CLI) handleCommand(ctx context.Context, line string) error {
 		c.cmdSetSession(args)
 	case "/discover":
 		return c.cmdDiscover(ctx, args)
+	case "/catalog":
+		return c.cmdCatalog(ctx, args)
+	case "/skills":
+		return c.cmdSkills(ctx, args)
 	case "/invoke":
 		return c.cmdInvoke(ctx, args)
 	case "/cron":
@@ -167,6 +174,102 @@ func (c *CLI) cmdDiscover(ctx context.Context, args []string) error {
 	} else {
 		c.printf("%s\n", text)
 	}
+	return nil
+}
+
+func (c *CLI) cmdCatalog(ctx context.Context, args []string) error {
+	instName := flagValue(args, "--instance", "-i")
+	if instName == "" {
+		instName = c.instance
+	}
+
+	inst, err := c.registry.Resolve(instName)
+	if err != nil {
+		return err
+	}
+
+	c.printf("Connecting to %s via WebSocket...\n", inst.Name)
+	ws := openclaw.NewWSClient(
+		c.registry.ClientURL(inst.Name),
+		c.registry.ClientToken(inst.Name),
+	)
+	if err := ws.Connect(ctx); err != nil {
+		return fmt.Errorf("websocket connect: %w", err)
+	}
+	defer ws.Close()
+
+	catalog, err := ws.ToolsCatalog(ctx)
+	if err != nil {
+		return fmt.Errorf("tools.catalog: %w", err)
+	}
+
+	c.printf("\nAgent: %s\n", catalog.AgentID)
+	c.printf("Profiles: ")
+	for i, p := range catalog.Profiles {
+		if i > 0 {
+			c.printf(", ")
+		}
+		c.printf("%s", p.Label)
+	}
+	c.printf("\n\n")
+
+	total := 0
+	for _, g := range catalog.Groups {
+		c.printf("  %s:\n", g.Label)
+		for _, t := range g.Tools {
+			desc := t.Description
+			if len(desc) > 60 {
+				desc = desc[:57] + "..."
+			}
+			c.printf("    %-25s %s\n", t.ID, desc)
+			total++
+		}
+	}
+	c.printf("\n  Total: %d tools\n\n", total)
+	return nil
+}
+
+func (c *CLI) cmdSkills(ctx context.Context, args []string) error {
+	instName := flagValue(args, "--instance", "-i")
+	if instName == "" {
+		instName = c.instance
+	}
+
+	inst, err := c.registry.Resolve(instName)
+	if err != nil {
+		return err
+	}
+
+	c.printf("Connecting to %s via WebSocket...\n", inst.Name)
+	ws := openclaw.NewWSClient(
+		c.registry.ClientURL(inst.Name),
+		c.registry.ClientToken(inst.Name),
+	)
+	if err := ws.Connect(ctx); err != nil {
+		return fmt.Errorf("websocket connect: %w", err)
+	}
+	defer ws.Close()
+
+	skills, err := ws.SkillsStatus(ctx)
+	if err != nil {
+		return fmt.Errorf("skills.status: %w", err)
+	}
+
+	c.printf("\nSkills (%d):\n", len(skills.Skills))
+	for _, s := range skills.Skills {
+		status := "ok"
+		if s.Disabled {
+			status = "disabled"
+		} else if !s.Eligible {
+			status = "ineligible"
+		}
+		emoji := s.Emoji
+		if emoji == "" {
+			emoji = " "
+		}
+		c.printf("  %s %-20s %-10s %s\n", emoji, s.Name, status, s.Description)
+	}
+	c.printf("\n")
 	return nil
 }
 
@@ -340,7 +443,9 @@ func (c *CLI) printHelp() {
 Commands:
   /help, /h                Show this help
   /tools                   List available MCP tools
-  /discover [--instance X] Discover available OpenClaw tools on a worker
+  /discover [--instance X] Discover available tools (HTTP probe)
+  /catalog [--instance X]  List all tools via WebSocket (requires operator scope)
+  /skills [--instance X]   List all skills via WebSocket (requires operator scope)
   /status [--instance X]   Health check
   /instances               List worker instances
   /instance [name]         Set active worker (empty = reset to default)

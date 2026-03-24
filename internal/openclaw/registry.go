@@ -87,6 +87,33 @@ func (r *Registry) Size() int {
 	return len(r.clients)
 }
 
+// ClientToken returns the token for the named instance.
+// Returns empty string if the instance is not found or has no token.
+func (r *Registry) ClientToken(name string) string {
+	if name == "" {
+		name = r.defaultName
+	}
+	for _, cfg := range r.configs {
+		if cfg.Name == name {
+			return cfg.Token
+		}
+	}
+	return ""
+}
+
+// ClientURL returns the URL for the named instance.
+func (r *Registry) ClientURL(name string) string {
+	if name == "" {
+		name = r.defaultName
+	}
+	for _, cfg := range r.configs {
+		if cfg.Name == name {
+			return cfg.URL
+		}
+	}
+	return ""
+}
+
 // ProbeResult holds the startup probe results for one instance.
 type ProbeResult struct {
 	Name           string

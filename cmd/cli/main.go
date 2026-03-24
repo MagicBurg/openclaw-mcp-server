@@ -57,7 +57,7 @@ func main() {
 	defer session.Close()
 
 	// Run the interactive CLI.
-	repl := cli.New(session, os.Stdin, os.Stdout)
+	repl := cli.New(session, registry, os.Stdin, os.Stdout)
 	if err := repl.Run(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 	}
