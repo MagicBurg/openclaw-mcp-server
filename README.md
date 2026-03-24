@@ -1,18 +1,34 @@
 # OpenClaw MCP Server
 
-A Go MCP (Model Context Protocol) server that exposes OpenClaw's skills, tools, chat, and cron capabilities. Designed to orchestrate multiple OpenClaw instances as workers for an upstream agentic platform.
+A Go [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) server that exposes [OpenClaw](https://github.com/nicepkg/openclaw)'s skills, tools, chat, and cron capabilities. Designed to orchestrate multiple OpenClaw instances as workers for an upstream agentic platform.
 
-## Architecture
+## Overview
 
-```
-Agentic Platform (MCP Client)
-    ↕ MCP Protocol (stdio / Streamable HTTP)
-OpenClaw MCP Server (this project)
-    ├── Instance Registry (worker management)
-    ├── OpenClaw HTTP Client
-    └── MCP Tool Handlers
-    ↕ HTTP
-OpenClaw Gateway(s) (workers)
+OpenClaw is a personal AI assistant framework with 50+ skills, 86+ extensions, and 20+ built-in agent tools. This MCP server acts as a bridge layer, letting any MCP-compatible client (Claude Desktop, custom agents, etc.) invoke OpenClaw capabilities across one or more gateway instances.
+
+**Key features:**
+- 5 MCP tools covering chat, direct tool invocation, cron management, health checks, and instance listing
+- Multi-instance support — treat multiple OpenClaw gateways as workers
+- Two transports: stdio (local) and Streamable HTTP (remote)
+- Simple bearer token auth for HTTP mode
+
+See the [Architecture](docs/architecture.md) doc for details, or jump to [Installation](docs/installation.md) to get started.
+
+## Quick Start
+
+```bash
+# Build
+go build -o openclaw-mcp-server ./cmd/server/
+
+# Run (stdio, single instance)
+OPENCLAW_URL=http://127.0.0.1:18789 \
+OPENCLAW_TOKEN=your-token \
+./openclaw-mcp-server
+
+# Run (HTTP, multi-instance)
+OPENCLAW_INSTANCES='[{"name":"w1","url":"http://10.0.0.1:18789","token":"sk-1","default":true}]' \
+MCP_AUTH_TOKEN=my-secret \
+./openclaw-mcp-server --transport http --port 8080
 ```
 
 ## MCP Tools
@@ -25,97 +41,17 @@ OpenClaw Gateway(s) (workers)
 | `openclaw_status` | Check health status of a worker instance |
 | `openclaw_instances` | List all configured worker instances |
 
-## Quick Start
+See [Tools Reference](docs/tools.md) for full input/output schemas and examples.
 
-### Prerequisites
+## Documentation
 
-- Go 1.24+
-- One or more running OpenClaw gateway instances
-
-### Build
-
-```bash
-go build -o openclaw-mcp-server ./cmd/server/
-```
-
-### Run (stdio mode)
-
-```bash
-OPENCLAW_URL=http://127.0.0.1:18789 \
-OPENCLAW_TOKEN=your-gateway-token \
-./openclaw-mcp-server
-```
-
-### Run (HTTP mode)
-
-```bash
-OPENCLAW_URL=http://127.0.0.1:18789 \
-OPENCLAW_TOKEN=your-gateway-token \
-MCP_AUTH_TOKEN=your-mcp-auth-token \
-./openclaw-mcp-server --transport http --port 8080
-```
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OPENCLAW_URL` | Single instance gateway URL | `http://127.0.0.1:18789` |
-| `OPENCLAW_TOKEN` | Bearer token for gateway auth | _(none)_ |
-| `OPENCLAW_TIMEOUT` | Request timeout (Go duration) | `120s` |
-| `OPENCLAW_INSTANCES` | JSON array of instance configs (overrides single-instance vars) | _(none)_ |
-| `MCP_TRANSPORT` | Transport mode: `stdio` or `http` | `stdio` |
-| `MCP_PORT` | HTTP server port | `8080` |
-| `MCP_HOST` | HTTP server bind address | `0.0.0.0` |
-| `MCP_AUTH_TOKEN` | Bearer token for MCP client auth (HTTP mode) | _(none)_ |
-
-### CLI Flags
-
-```
---transport, -t    Transport mode: stdio, http
---port, -p         HTTP port
---host             HTTP bind address
---openclaw-url     Single instance URL
---openclaw-token   Single instance token
---auth-token       Bearer token for MCP client auth
-```
-
-CLI flags override environment variables.
-
-### Multi-Instance (Workers)
-
-To connect to multiple OpenClaw instances, set `OPENCLAW_INSTANCES` as a JSON array:
-
-```bash
-OPENCLAW_INSTANCES='[
-  {"name": "worker-1", "url": "http://10.0.0.1:18789", "token": "sk-1", "default": true},
-  {"name": "worker-2", "url": "http://10.0.0.2:18789", "token": "sk-2", "timeout": "60s"}
-]' ./openclaw-mcp-server
-```
-
-Each tool accepts an optional `instance` parameter to target a specific worker. If omitted, the default instance is used.
-
-## Development
-
-### Run Tests
-
-```bash
-go test ./...
-```
-
-### Project Structure
-
-```
-cmd/server/         Entry point
-internal/
-  config/           Configuration loading
-  openclaw/         HTTP client + instance registry
-  tools/            MCP tool handlers
-  server/           Server creation and wiring
-docs/               Research and documentation
-plan/               Implementation plans
-```
+| Doc | Description |
+|-----|-------------|
+| [Installation](docs/installation.md) | Prerequisites, build, and setup |
+| [Configuration](docs/configuration.md) | Environment variables, CLI flags, multi-instance |
+| [Architecture](docs/architecture.md) | System design, components, data flow |
+| [Tools Reference](docs/tools.md) | Detailed MCP tool schemas and usage examples |
+| [Development](docs/development.md) | Contributing, testing, project structure |
 
 ## License
 
