@@ -14,21 +14,26 @@ OpenClaw is a personal AI assistant framework with 50+ skills, 86+ extensions, a
 
 See the [Architecture](docs/architecture.md) doc for details, or jump to [Installation](docs/installation.md) to get started.
 
+## Install
+
+```bash
+git clone https://github.com/MagicBurg/openclaw-mcp-server.git && cd openclaw-mcp-server && ./install.sh
+```
+
+This installs the `openclaw-mcp-server` binary to `~/.local/bin`. See [Installation](docs/installation.md) for options.
+
 ## Quick Start
 
 ```bash
-# Build
-go build -o openclaw-mcp-server ./cmd/server/
-
 # Run (stdio, single instance)
 OPENCLAW_URL=http://127.0.0.1:18789 \
 OPENCLAW_TOKEN=your-token \
-./openclaw-mcp-server
+openclaw-mcp-server
 
 # Run (HTTP, multi-instance)
 OPENCLAW_INSTANCES='[{"name":"w1","url":"http://10.0.0.1:18789","token":"sk-1","default":true}]' \
 MCP_AUTH_TOKEN=my-secret \
-./openclaw-mcp-server --transport http --port 8080
+openclaw-mcp-server --transport http --port 8080
 ```
 
 ## MCP Tools
