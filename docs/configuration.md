@@ -1,8 +1,41 @@
 # Configuration
 
-Configuration is loaded from environment variables and can be overridden by CLI flags.
+Configuration is loaded from a TOML config file, environment variables, and CLI flags.
 
-**Precedence:** CLI flags > environment variables > defaults.
+**Precedence:** CLI flags > environment variables > config file > defaults.
+
+## Config File
+
+The server searches for `config.toml` in the following locations (first found wins):
+
+1. `./config.toml` (current directory)
+2. `~/.config/openclaw-mcp-server/config.toml`
+
+Or specify explicitly: `--config /path/to/config.toml`
+
+### Example
+
+```toml
+[server]
+transport = "http"
+host = "127.0.0.1"
+port = 8080
+auth_token = "my-mcp-token"
+
+[[instances]]
+name = "worker-1"
+url = "http://10.0.0.1:18789"
+token = "sk-token-1"
+default = true
+timeout = "30s"
+
+[[instances]]
+name = "worker-2"
+url = "http://10.0.0.2:18789"
+token = "sk-token-2"
+```
+
+See `config.example.toml` in the project root for a fully commented template.
 
 ## Environment Variables
 
@@ -28,6 +61,7 @@ Configuration is loaded from environment variables and can be overridden by CLI 
 
 | Flag | Description |
 |------|-------------|
+| `--config` | Path to config.toml |
 | `--transport` | Transport mode: `stdio` or `http` |
 | `--port` | HTTP server port |
 | `--host` | HTTP server bind address |

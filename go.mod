@@ -2,7 +2,10 @@ module github.com/weiboz/openclaw-mcp-server
 
 go 1.24.0
 
-require github.com/modelcontextprotocol/go-sdk v1.3.1
+require (
+	github.com/BurntSushi/toml v1.6.0
+	github.com/modelcontextprotocol/go-sdk v1.3.1
+)
 
 require (
 	github.com/google/jsonschema-go v0.4.2 // indirect

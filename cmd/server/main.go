@@ -18,6 +18,7 @@ import (
 
 func main() {
 	// CLI flags.
+	configFile := flag.String("config", "", "Path to config.toml (default: ./config.toml or ~/.config/openclaw-mcp-server/config.toml)")
 	transport := flag.String("transport", "", "Transport mode: stdio, http (env: MCP_TRANSPORT)")
 	port := flag.Int("port", 0, "HTTP port (env: MCP_PORT)")
 	host := flag.String("host", "", "HTTP bind address (env: MCP_HOST)")
@@ -36,7 +37,7 @@ func main() {
 	setEnvIfFlag("OPENCLAW_TOKEN", *openclawToken)
 	setEnvIfFlag("MCP_AUTH_TOKEN", *authToken)
 
-	cfg, err := config.LoadFromEnv()
+	cfg, err := config.Load(*configFile)
 	if err != nil {
 		log.Fatalf("configuration error: %v", err)
 	}

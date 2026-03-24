@@ -1,0 +1,28 @@
+# OpenClaw MCP Server Configuration
+# Copy to config.toml and edit.
+# Search paths: ./config.toml, ~/.config/openclaw-mcp-server/config.toml
+# Or specify with: --config /path/to/config.toml
+
+[server]
+transport = "stdio"       # "stdio" or "http"
+# host = "0.0.0.0"        # HTTP bind address
+# port = 8080             # HTTP port
+# auth_token = ""         # Bearer token for MCP client auth (HTTP mode)
+
+# Define one or more OpenClaw gateway instances (workers).
+# The first instance is the default unless one is marked with default = true.
+
+[[instances]]
+name = "default"
+url = "http://127.0.0.1:18789"
+# token = ""              # Gateway bearer token
+# timeout = "120s"        # Request timeout
+# default = true          # Mark as default instance
+
+# Add more workers:
+#
+# [[instances]]
+# name = "worker-2"
+# url = "http://10.0.0.2:18789"
+# token = "sk-token-2"
+# timeout = "60s"

@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -17,6 +18,18 @@ func clearEnv(t *testing.T) {
 		os.Unsetenv(key)
 	}
 }
+
+func writeConfig(t *testing.T, content string) string {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	return path
+}
+
+// --- LoadFromEnv tests (backward compat) ---
 
 func TestLoadFromEnv_Defaults(t *testing.T) {
 	clearEnv(t)
@@ -131,6 +144,208 @@ func TestLoadFromEnv_InvalidInstancesJSON(t *testing.T) {
 	}
 }
 
+func TestLoadFromEnv_ServerConfig(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("MCP_TRANSPORT", "http")
+	t.Setenv("MCP_HOST", "127.0.0.1")
+	t.Setenv("MCP_PORT", "9090")
+	t.Setenv("MCP_AUTH_TOKEN", "my-token")
+
+	cfg, err := LoadFromEnv()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if cfg.Transport != "http" {
+		t.Errorf("transport = %q", cfg.Transport)
+	}
+	if cfg.Host != "127.0.0.1" {
+		t.Errorf("host = %q", cfg.Host)
+	}
+	if cfg.Port != 9090 {
+		t.Errorf("port = %d", cfg.Port)
+	}
+	if cfg.AuthToken != "my-token" {
+		t.Errorf("auth token = %q", cfg.AuthToken)
+	}
+}
+
+// --- Config file tests ---
+
+func TestLoad_ConfigFile(t *testing.T) {
+	clearEnv(t)
+	path := writeConfig(t, `
+[server]
+transport = "http"
+host = "127.0.0.1"
+port = 9090
+auth_token = "file-token"
+
+[[instances]]
+name = "worker-1"
+url = "http://10.0.0.1:18789"
+token = "sk-1"
+default = true
+timeout = "30s"
+
+[[instances]]
+name = "worker-2"
+url = "http://10.0.0.2:18789"
+token = "sk-2"
+`)
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if cfg.Transport != "http" {
+		t.Errorf("transport = %q", cfg.Transport)
+	}
+	if cfg.Host != "127.0.0.1" {
+		t.Errorf("host = %q", cfg.Host)
+	}
+	if cfg.Port != 9090 {
+		t.Errorf("port = %d", cfg.Port)
+	}
+	if cfg.AuthToken != "file-token" {
+		t.Errorf("auth_token = %q", cfg.AuthToken)
+	}
+	if len(cfg.Instances) != 2 {
+		t.Fatalf("instances = %d, want 2", len(cfg.Instances))
+	}
+	if cfg.Instances[0].Name != "worker-1" || !cfg.Instances[0].Default {
+		t.Errorf("first instance: %+v", cfg.Instances[0])
+	}
+	if cfg.Instances[0].Timeout != 30*time.Second {
+		t.Errorf("timeout = %v, want 30s", cfg.Instances[0].Timeout)
+	}
+	if cfg.Instances[1].Name != "worker-2" {
+		t.Errorf("second instance: %+v", cfg.Instances[1])
+	}
+}
+
+func TestLoad_EnvOverridesFile(t *testing.T) {
+	clearEnv(t)
+	path := writeConfig(t, `
+[server]
+transport = "stdio"
+port = 3000
+
+[[instances]]
+name = "file-worker"
+url = "http://10.0.0.1:18789"
+`)
+
+	t.Setenv("MCP_TRANSPORT", "http")
+	t.Setenv("MCP_PORT", "9090")
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if cfg.Transport != "http" {
+		t.Errorf("transport = %q, want env override", cfg.Transport)
+	}
+	if cfg.Port != 9090 {
+		t.Errorf("port = %d, want env override", cfg.Port)
+	}
+	// Instances from file should remain.
+	if len(cfg.Instances) != 1 || cfg.Instances[0].Name != "file-worker" {
+		t.Errorf("instances should come from file: %+v", cfg.Instances)
+	}
+}
+
+func TestLoad_EnvInstancesOverrideFileInstances(t *testing.T) {
+	clearEnv(t)
+	path := writeConfig(t, `
+[[instances]]
+name = "file-worker"
+url = "http://10.0.0.1:18789"
+`)
+
+	t.Setenv("OPENCLAW_INSTANCES", `[{"name": "env-worker", "url": "http://10.0.0.2:18789"}]`)
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(cfg.Instances) != 1 || cfg.Instances[0].Name != "env-worker" {
+		t.Errorf("env instances should override file: %+v", cfg.Instances)
+	}
+}
+
+func TestLoad_NoConfigFile(t *testing.T) {
+	clearEnv(t)
+
+	cfg, err := Load("/nonexistent/path/config.toml")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Should fall back to defaults.
+	if cfg.Transport != "stdio" {
+		t.Errorf("transport = %q", cfg.Transport)
+	}
+	if len(cfg.Instances) != 1 || cfg.Instances[0].Name != "default" {
+		t.Errorf("should have default instance: %+v", cfg.Instances)
+	}
+}
+
+func TestLoad_InvalidToml(t *testing.T) {
+	clearEnv(t)
+	path := writeConfig(t, `this is not valid toml [[[`)
+
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("expected error for invalid TOML")
+	}
+}
+
+func TestLoad_InvalidTimeoutInFile(t *testing.T) {
+	clearEnv(t)
+	path := writeConfig(t, `
+[[instances]]
+name = "worker"
+url = "http://10.0.0.1:18789"
+timeout = "notaduration"
+`)
+
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("expected error for invalid timeout in config file")
+	}
+}
+
+func TestLoad_ServerOnlyFile(t *testing.T) {
+	clearEnv(t)
+	path := writeConfig(t, `
+[server]
+transport = "http"
+port = 4000
+`)
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if cfg.Transport != "http" {
+		t.Errorf("transport = %q", cfg.Transport)
+	}
+	if cfg.Port != 4000 {
+		t.Errorf("port = %d", cfg.Port)
+	}
+	// Should still have default instance from env fallback.
+	if len(cfg.Instances) != 1 || cfg.Instances[0].Name != "default" {
+		t.Errorf("should fall back to default instance: %+v", cfg.Instances)
+	}
+}
+
+// --- Validation tests ---
+
 func TestValidateInstances_DuplicateNames(t *testing.T) {
 	err := validateInstances([]InstanceConfig{
 		{Name: "worker", URL: "http://a:1"},
@@ -196,31 +411,5 @@ func TestInstanceConfig_HasToken(t *testing.T) {
 	}
 	if !(InstanceConfig{Token: "sk-test"}).HasToken() {
 		t.Error("non-empty token should return true")
-	}
-}
-
-func TestLoadFromEnv_ServerConfig(t *testing.T) {
-	clearEnv(t)
-	t.Setenv("MCP_TRANSPORT", "http")
-	t.Setenv("MCP_HOST", "127.0.0.1")
-	t.Setenv("MCP_PORT", "9090")
-	t.Setenv("MCP_AUTH_TOKEN", "my-token")
-
-	cfg, err := LoadFromEnv()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if cfg.Transport != "http" {
-		t.Errorf("transport = %q", cfg.Transport)
-	}
-	if cfg.Host != "127.0.0.1" {
-		t.Errorf("host = %q", cfg.Host)
-	}
-	if cfg.Port != 9090 {
-		t.Errorf("port = %d", cfg.Port)
-	}
-	if cfg.AuthToken != "my-token" {
-		t.Errorf("auth token = %q", cfg.AuthToken)
 	}
 }
